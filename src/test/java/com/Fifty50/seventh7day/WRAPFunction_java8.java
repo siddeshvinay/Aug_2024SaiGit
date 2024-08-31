@@ -12,7 +12,7 @@ public class WRAPFunction_java8 {
         return element -> new wrapfuntion(element, driver);
     }
 
-    public static void main(String[] args) {
+/*    public static void main(String[] args) {
         WebDriver driver = new ChromeDriver();
         WebElement element = driver.findElement(By.xpath("//input[@id='username']"));
         wrapfuntion wrappedElement = wrapfuntion.wrap(driver).apply(element);
@@ -21,6 +21,6 @@ public class WRAPFunction_java8 {
         wrappedElement.sendKeys("username");
         wrappedElement.hover();
         wrappedElement.waitForVisibility();
-    }
+    }*/
 
 }
