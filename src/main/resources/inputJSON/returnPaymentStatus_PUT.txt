@@ -1,0 +1,9 @@
+{
+    "username": "ggudi@corcentric.com",
+    "statusId": 14,
+    "amount_posted": 0,
+    "amount_voided": 0,
+    "card_processed_date": "",
+    "ship_date": "",
+    "clear_date": ""
+}

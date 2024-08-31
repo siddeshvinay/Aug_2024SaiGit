@@ -1,0 +1,15 @@
+{
+    "taxId": "7000258610",
+    "numberOfChecks": 4,
+    "totalDollar": 100,
+    "accountNumber": "1212",
+    "accountType": "checking",
+    "bankName": "Welsfargoaanew",
+    "entityIdentifier": "nonee",
+    "accountOwnerName": "NewName2",
+    "abaRoutingNumber": "1234447",
+    "bankCountryIso": "US",
+    "currencyCode": "CAD",
+    "remittanceDeliveryEmail": "text@gmail.com", 
+    "offerType":"ach"
+}

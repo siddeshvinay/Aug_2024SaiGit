@@ -1,0 +1,7 @@
+{
+    "supplierName": "auto_supplier_80000005",
+    "phoneNumber": "9530000415",
+    "enrollmentId": "710",
+    "vnetClientId": 641426845,
+    "accessCode": "yzM249I67Y5D"
+}

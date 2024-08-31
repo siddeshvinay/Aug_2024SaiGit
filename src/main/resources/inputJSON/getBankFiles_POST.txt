@@ -1,0 +1,11 @@
+{
+    "filter": {
+        "bankFileId": 2,
+        "paymentFileId": 10
+    },
+    "options": {
+        "countOnly": false
+    },
+    "pageNo": 0,
+    "recordsPerPage": 0
+}

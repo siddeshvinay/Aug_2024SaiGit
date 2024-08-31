@@ -1,0 +1,54 @@
+package com.corcentric.pages;
+
+import org.openqa.selenium.By;
+
+public class PayCRM_RPA_ModuleUIPage {
+    public static String RPA_TILE_PATH = "//h3[text()='%s']";
+    public static By RPA_REASSIGN_BTN = By.id("btn_rpa_reassign");
+    public static By RPA_SUCCESS_BTN = By.id("btn_rpa_success");
+    public static By RPA_FAIL_BTN = By.id("btn_rpa_fail");
+    public static String RPA_CASE_CARD_DATA = "//div[@class='card']/dl/dd[text()='%s']";
+    public static By RPA_REASSIGN_MODEL = By.xpath("//div[@id='modal_reassign' and contains(@style,'block')]");
+    public static By RPA_SUCCESS_MODEL = By.xpath("//div[@id='modal_success' and contains(@style,'block')]");
+    public static By RPA_REASSIGN_MODEL_NOTES = By.id("reassign_notes");
+    public static By RPA_REASSIGN_MODEL_USER_ASSIGN_DROPDOWN = By.id("rpa_case_reassign_user");
+    public static By RPA_REASSIGN_MODEL_SUBMIT = By.id("btn_submit_reassign");
+    public static By RPA_SUCCESS_MODEL_SUBMIT = By.id("btn_submit_success");
+    public static By obj_RPA_Label = By.xpath("//h3[text()='RPA']/parent::a");
+    public static String obj_RPA_Cases_Grid = "//div[@id='divRpaCasesContainer']";
+    public static By obj_PaymentHelp_Label = By.xpath("//h3[text()='Payment Help']");
+    public static String obj_CaseNumber_Details = "//div[@id='case_show_status']";
+    public static By obj_Success_Btn = By.xpath("//div[@id='btn_rpa_success']");
+    public static By obj_Fail_Btn = By.xpath("//div[@id='btn_rpa_fail']");
+    public static By obj_Reassign_Btn = By.xpath("//div[@id='btn_rpa_reassign']");
+    public static By obj_Success_Submit_Btn = By.xpath("//button[@id='btn_submit_success']");
+    public static By obj_Fail_Submit_Btn = By.xpath("//button[@id='btn_submit_rpa_fail']");
+    public static By obj_Reassign_Submit_Btn = By.xpath("//button[@id='btn_submit_reassign']");
+    public static String obj_ModelSuccess_Dialog = "//div[@id='modal_success']";
+    public static String obj_ModelFail_Dialog = "//div[@id='rpa_modal_fail']";
+    public static String obj_ModelReassign_Dialog = "//div[@id='modal_reassign']";
+    public static By obj_SuccessNotes_TextArea = By.xpath("//textarea[@id='success_notes']");
+    public static By obj_ReassignNotes_Textarea = By.xpath("//textarea[@id='reassign_notes']");
+    public static By obj_FailNotes_TextArea = By.xpath("//textarea[@id='rpa_fail_notes']");
+    public static By obj_search_Loading = By.xpath("//div[@class='dx-overlay-content dx-resizable dx-loadpanel-content']//div[text()='Loading records...']");
+    public static By obj_UserToAssign_List = By.xpath("//select[@id='rpa_case_reassign_user']");
+    public static String obj_PaymentMethod_Grid = "//div[@id='divPaymentProcessesGridContainer']";
+    public static String obj_Invoice_Grid = "//div[@class='dataTables_scrollBody']";
+    public static String obj_PaymentData_Grid = "//div[@id='payment_data']";
+    public static By obj_PaymentData_Link = By.xpath("//a[text()='Payment Data']");
+    public static String obj_RPA_CaseInfo_Grid = "//div[@id='section_case_information']";
+    public static By obj_Fail_Notes_Textarea_Label = By.xpath("//label[@class='control-label']");
+    public static By obj_Fail_Notes_Error_Label = By.xpath("//span[@id='rpa_fail_notes-error']");
+    public static String obj_CaseActivity_Grid = "//div[@id='divCaseActivitiesDashboardContainer']";
+    public static By obj_SplitterHorizonal_Line = By.xpath("//div[@class='splitter-horizontal']");
+    public static By obj_Activities_Link = By.xpath("//a[text()='Activities']");
+    public static String obj_NavigationBar_UserName_Tab = "//div[@id='navbarSupportedContent']";
+    public static String obj_Roles_Grid = "//ul[@class='unstyled centered']";
+    public static By obj_RPAEnabledSuppliers_Link = By.xpath("//a[text()='RPA Enabled Suppliers']");
+    public static By obj_RunReport_Btn = By.xpath("//button[@id='btn_submit_rpa_enabled_suppliers']");
+    public static String obj_RPAEnabledSuppliers_Grid = "//div[@id='divRpaEnabledSuppliersContainer']";
+    public static By obj_ViewActivities_Btn = By.xpath("//button[@id='btn_run_case_activity_report']");
+    public static String obj_SupplierDetails_Grid = "//div[@id='case_layout_design']";
+    public static By obj_UpdateRole_Btn = By.xpath("//button[@id='btn_edit_user']");
+    public static By obj_Export_RPAEnabledSuppliers_Btn = By.xpath("//*[@id='btnExportdivRpaEnabledSuppliersContainer']");
+}

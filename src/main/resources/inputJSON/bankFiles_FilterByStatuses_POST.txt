@@ -1,0 +1,6 @@
+{
+    "statuses": [
+        "pending",
+        "released_pending"
+    ] 
+}

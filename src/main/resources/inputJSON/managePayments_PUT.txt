@@ -1,0 +1,10 @@
+{
+  "username": "ggudi",
+  "statusId": 19,
+  "amount_posted": 110,
+  "amount_voided": 10,
+  "card_processed_date": "",
+  "ship_date": "",
+  "clear_date": "",
+  "send_error_notification": false
+}

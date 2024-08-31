@@ -1,0 +1,3 @@
+{
+    "reqObj": "{'ClientCompanyID':'215943907', 'EntityIdentifier':'Wilkinson_CPParent', 'SFDCCampaignID':'7017f0000015XclAAE', 'NumberOfChecks':'3', 'TotalDollar':'5.12', 'VenNumber':'', 'VNDPercentage':'0','AccountNumber':'12121212', 'BankName':'FNBO', 'AccountOwnerName':'Test','ABARoutingNumber':'104000016', 'RemittanceDeliveryEmail':'prasad.remittance14@apps.com','VCardEmailAddress':'aa@gmail.com', 'PaymentTypeID':'2', 'BankCountryISO':'US', 'CurrencyCode':'USD', 'AccountTypeID':'1', 'OfferNumber':'4', 'VCardFax':'', 'LinkID':'99956', 'SupplierCompanyID':'727440426', 'VCardNetworkID':''}"
+}

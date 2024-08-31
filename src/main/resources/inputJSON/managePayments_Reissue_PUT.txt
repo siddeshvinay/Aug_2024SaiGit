@@ -1,0 +1,16 @@
+{
+    "userName": "ggudi",
+    "paymentType": "Check",
+    "paymentAmount": 1,
+    "paymentDate": "20220704",
+    "paymentReference": "123456789",
+    "remitToID": "12345",
+    "payeeName": "Test User",
+    "payeeAddress1": "ABC",
+    "payeeAddress2": "AB",
+    "payeeCity": "Chicago",
+    "payeeState": "IL",
+    "payeeZip": "60640",
+    "payeeCountry": "US",
+    "debitEntityIdentifier": ""
+}

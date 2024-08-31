@@ -1,0 +1,12 @@
+{
+  "links": [
+    {
+      "id": 77,
+      "parentVNetCompanyId": 813030001,
+      "supplierVNetCompanyId": 771558801,
+      "clientVNetCompanyId": 590877109,
+      "accessCode": "C_000000001_01_0002_",
+      "enrollmentId": 885
+    }
+  ]
+}

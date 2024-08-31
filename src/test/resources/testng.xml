@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="All Test Suite" data-provider-thread-count="2">
+    <test name="UITestAutomation">
+        <classes>
+           <class name="com.corcentric.runner.CucumberTestRunner"></class>
+        </classes>
+    </test>
+    <test name="FailRetryRun">
+        <classes>
+            <class name="com.corcentric.runner.CucumberFailRetryTest"></class>
+        </classes>
+    </test>
+</suite>

@@ -1,0 +1,10 @@
+{
+    "username": "ggudi@corcentric.com",
+    "notes": "this is a note from QA",
+    "payments": [
+        {
+            "companyId": 990264718,
+            "detailId": 123067
+        }
+    ]
+}

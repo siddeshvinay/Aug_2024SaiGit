@@ -1,0 +1,12 @@
+{
+    "companyId": 421806639,
+    "username": "ggudi",
+    "notes": "Testing Testing",
+    "sections": [
+        {
+            "areaId": 1,
+            "detailId": 421806639
+        }
+    ],
+    "finalize": true
+}

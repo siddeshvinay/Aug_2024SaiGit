@@ -1,0 +1,20 @@
+{
+	"paymentTypeID": 4,
+	"companyID": 445855732,
+	"piid": 22723,
+	"pieid": 0,
+	"picid": 9805,
+	"accountNumber": "123",
+	"bankName": null,
+	"accountOwnerName": null,
+	"abaRoutingNumber": null,
+	"countryISO": "US",
+	"currencyCode": "USD",
+	"vCardEmailAddress": "corcentric22587@cpay.com",
+	"vCardFax": "",
+	"remittanceDeliveryAddress": "corcentric22587@cpay.com",
+	"accountTypeID": null,
+	"accountType": null,
+	"vCardNetworkID": null,
+	"vCardNetwork": null
+}

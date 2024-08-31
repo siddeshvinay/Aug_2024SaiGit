@@ -1,0 +1,1273 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <entry key="CPAY978_AssistedPaymentServices_Cases_Grid">
+        SELECT cases.id as cases_id,
+        companies.name as company_name,
+        suppliers.name as supplier_name,
+        suppliers.priority_id as supplier_priority_id,
+        (CASE
+        WHEN (SELECT count(1)
+        FROM cases c
+        WHERE c.case_type_id = ANY (ARRAY [2, 4])
+        AND c.company_supplier_id = cases.company_supplier_id) = 1 THEN 1
+        else 0 end) as first_time_payment,
+        COALESCE(CAST(cases.supplemental_information -> 'due_date' AS date),
+        CAST(cases.supplemental_information -> 'valuedateassigned' AS date)) as value_date,
+        replace(coalesce(suppliers.profile -> 'timezone', ''), ' Time Zone', '') AS time_zone,
+        case_types.name as case_type_name,
+        priorities.name as priority_name,
+        cases.status_desc as status_desc,
+        users.name as user_name,
+        cases.payment_id_formatted,
+        transactions.payment_reference,
+        CASE cases.supplemental_information -> 'return_status_id'
+        WHEN '1' THEN 'Pending'
+        WHEN '2' THEN 'Exception'
+        WHEN '3' THEN 'Submitted'
+        WHEN '4' THEN 'Processed'
+        WHEN '5' THEN 'Confirmed'
+        WHEN '6' THEN 'Virtual Card Processed'
+        WHEN '7' THEN 'Returned'
+        WHEN '8' THEN 'Notification Of Change'
+        WHEN '9' THEN 'Reversed'
+        WHEN '10' THEN 'Reversal Unsuccessful'
+        WHEN '11' THEN 'Deleted'
+        WHEN '12' THEN 'Rejected'
+        WHEN '13' THEN 'Authorized'
+        WHEN '14' THEN 'Blocked'
+        WHEN '15' THEN 'Expired'
+        WHEN '16' THEN 'Cancelled'
+        WHEN '17' THEN 'Partially Blocked'
+        WHEN '18' THEN 'Partially Expired'
+        WHEN '19' THEN 'Partially Processed'
+        ELSE
+        cases.supplemental_information -> 'payment_instruction_status'
+        END as return_status,
+        cast(transactions.amount as decimal) as payment_amount,
+        cases.last_touched
+        FROM "cases"
+        INNER JOIN "companies" ON "companies"."id" = "cases"."company_id"
+        INNER JOIN "suppliers" ON "suppliers"."id" = "cases"."supplier_id"
+        INNER JOIN "company_suppliers" ON "company_suppliers"."id" = "cases"."company_supplier_id"
+        INNER JOIN "transactions" ON "transactions"."case_id" = "cases"."id"
+        INNER JOIN "priorities" ON "priorities"."id" = "cases"."priority_id"
+        INNER JOIN "case_types" ON "case_types"."id" = "cases"."case_type_id"
+        INNER JOIN "statuses" ON "statuses"."id" = "cases"."status_id"
+        INNER JOIN "users" ON "users"."id" = "cases"."user_id"
+        WHERE (NOT company_suppliers.status_id = ANY (ARRAY [61, 64, 67, 10]))
+        AND (cases.status_id = ANY (ARRAY [51, 52, 54, 55]))
+        AND ((cast(transactions.amount as decimal) > 0 AND transactions.transaction_type_id = ANY (ARRAY [2, 3])))
+        AND ((CAST(cases.supplemental_information -> 'valuedateassigned' AS date) &lt; (current_date - -5)
+        OR CAST(cases.supplemental_information -> 'due_date' AS date) &gt; (current_date - -5)))
+        AND (case_type_id = ANY (ARRAY [2, 4]))
+        AND (case_type_id = ANY (ARRAY [4, 2]))
+        AND (cases.status_id = ANY (ARRAY [51, 52, 55, 54]))
+        AND (suppliers.priority_id = ANY (ARRAY [9, 8, 7]))
+        AND companies.name is not null
+        AND suppliers.name is not null
+        AND suppliers.priority_id is not null
+        AND cases.last_touched is not null
+        AND suppliers.profile -> 'timezone' is not null
+        AND transactions.amount is not null
+        ORDER BY suppliers.priority_id desc,
+        (case when cases.case_type_id = 4 then CAST(cases.supplemental_information -> 'due_date' AS DATE) end),
+        (CASE
+        WHEN (SELECT count(1)
+        FROM cases c
+        WHERE c.case_type_id = ANY (ARRAY [2, 4])
+        AND c.company_supplier_id = cases.company_supplier_id) = 1 THEN 1
+        else 0 end) desc, cases.case_type_id desc, CAST(cases.supplemental_information -> 'due_date' AS date),
+        CAST(cases.supplemental_information -> 'valuedateassigned' AS date) limit 1
+    </entry>
+    
+    <entry key="CPAY976_EnrollmentsManager_Cases_Grid">
+        SELECT cases.id,
+        companies.name as company_name,
+        suppliers.name as supplier_name,
+        (CASE
+        WHEN (supplier_addresses.city is not null and supplier_addresses.state_province is not null and
+        supplier_addresses.postal_code is not null) then
+        supplier_addresses.city || ', ' || supplier_addresses.state_province || ' ' ||
+        supplier_addresses.postal_code
+        else '' end) as address,
+        replace(coalesce(suppliers.profile -> 'timezone', ''), ' Time Zone', '') AS time_zone,
+        case_types.name as case_type_name,
+        cases.profile -> 'case_outcome_type' as case_outcome,
+        priorities.name as priority_name,
+        cases.status_desc as status_desc,
+        users.name as user_name,
+        cast(COALESCE(company_suppliers.total_spend, '0') AS DECIMAL) as total_spend,
+        CAST(COALESCE(company_suppliers.number_checks, '0') AS INT) as check_count,
+        CONCAT(enrollment_activities.name, ' - ', enrollment_details.offer_type) as offer,
+        (enrollment_activities.supplemental_information -> 'offer_number') :: INTEGER as offer_number,
+        COALESCE(company_suppliers.instructions -> 'debit_card_candidate', '') as debit_card_candidate,
+        COALESCE(suppliers.origination_source, '') as origination_source
+        FROM "cases"
+        INNER JOIN "companies" ON "companies"."id" = "cases"."company_id"
+        INNER JOIN "suppliers" ON "suppliers"."id" = "cases"."supplier_id"
+        INNER JOIN "company_suppliers" ON "company_suppliers"."id" = "cases"."company_supplier_id"
+        INNER JOIN "priorities" ON "priorities"."id" = "cases"."priority_id"
+        INNER JOIN "case_types" ON "case_types"."id" = "cases"."case_type_id"
+        INNER JOIN "statuses" ON "statuses"."id" = "cases"."status_id"
+        INNER JOIN "users" ON "users"."id" = "cases"."user_id"
+        LEFT OUTER JOIN supplier_addresses on supplier_addresses.supplier_id = suppliers.id and
+        supplier_addresses.address_type_id = 1
+        LEFT OUTER JOIN enrollment_activities on enrollment_activities.id = cases.last_enrollment_activity_id
+        LEFT OUTER JOIN enrollment_details on enrollment_details.id = enrollment_activities.enrollment_detail_id
+        WHERE (NOT company_suppliers.status_id = ANY (ARRAY [61, 64, 67, 10]))
+        AND (cases.status_id = ANY (ARRAY [51, 52, 54, 55]))
+        AND ((company_suppliers.total_spend > -1 AND company_suppliers.number_checks > -1))
+        AND (case_type_id = ANY (ARRAY [1, 15]))
+        AND (cases.status_id = ANY (ARRAY [51, 52, 55, 54]))
+        AND (cases.priority_id = ANY (ARRAY [48, 49, 43, 41, 42, 40]))
+        AND (enrollment_details.offer_type = ANY (ARRAY ['VCA', 'VND', 'ACH']) OR
+        cases.last_enrollment_activity_id is null)
+        AND companies.name is not null
+        AND suppliers.name is not null
+        AND suppliers.profile -> 'timezone' is not null
+        AND case_types.name is not null
+        AND cases.profile -> 'case_outcome_type' is not null
+        AND enrollment_activities.supplemental_information -> 'offer_number' is not null
+        AND company_suppliers.instructions -> 'debit_card_candidate' is not null
+        AND suppliers.origination_source is not null
+        ORDER BY priorities.value desc, cast(COALESCE(company_suppliers.total_spend, '0') AS DECIMAL) desc,
+        CAST(COALESCE(company_suppliers.number_checks, '0') AS INT) desc limit 1
+    </entry>
+
+
+    <entry key="CPAY707_AssistedPaymentServices_Void_Tab">
+        SELECT
+        transactions.case_id as cases_id
+        --     transactions.id AS id,
+        --     transactions.name,
+        --     transaction_types.name AS transaction_type_name,
+        --     priorities.name AS priority_name,
+        --     statuses.name AS status_name,
+        --     transactions.tx_hash,
+        --     transactions.amount,
+        --     transactions.currency,
+        --     transactions.terms,
+        --     transactions.created_at,
+        --     transactions.payment_id,
+        --     transactions.vnet_company_id,
+        --     CAST(transactions.vnet_company_id AS VARCHAR) || '-' || CAST(transactions.payment_id AS VARCHAR) AS payment_id_formatted,
+        --     CAST(transactions.details -> 'tx_count' AS INT) AS check_count,
+        --     transactions.payment_reference AS payment_reference
+        FROM
+        "transactions"
+        INNER JOIN "transaction_types" ON "transaction_types"."id" = "transactions"."transaction_type_id"
+        INNER JOIN "statuses" ON "statuses"."id" = "transactions"."status_id"
+        INNER JOIN "priorities" ON "priorities"."id" = "transactions"."priority_id"
+        INNER JOIN "cases" ON "cases"."id" = "transactions"."case_id"
+        WHERE
+        cases.case_type_id = ANY (ARRAY [4, 2])
+        AND cases.status_id = ANY (ARRAY [51, 52, 55, 54])
+        AND "transactions"."case_id" IS NOT NULL
+        ORDER BY
+        "transactions"."name" ASC
+        LIMIT 1
+    </entry>
+
+    <entry key="CPAY708_AssistedPaymentServices_GenerateInvoice_Button">
+        SELECT
+        cases.id as cases_id,
+        companies.name AS company_name,
+        suppliers.name AS supplier_name,
+        suppliers.priority_id AS supplier_priority_id,
+        (
+        CASE WHEN (
+        SELECT
+        count(1)
+        FROM
+        cases c
+        WHERE
+        c.case_type_id = ANY (ARRAY [2, 4])
+        AND c.company_supplier_id = cases.company_supplier_id) = 1 THEN
+        1
+        ELSE
+        0
+        END) AS first_time_payment, COALESCE(CAST(cases.supplemental_information -> 'due_date' AS date), CAST(cases.supplemental_information -> 'valuedateassigned' AS date)) AS value_date, replace(coalesce(suppliers.profile -> 'timezone', ''), ' Time Zone', '') AS time_zone, case_types.name AS case_type_name, priorities.name AS priority_name, cases.status_desc AS status_desc, users.name AS user_name, cases.payment_id_formatted, transactions.payment_reference, CASE cases.supplemental_information -> 'return_status_id'
+        WHEN '1' THEN
+        'Pending'
+        WHEN '2' THEN
+        'Exception'
+        WHEN '3' THEN
+        'Submitted'
+        WHEN '4' THEN
+        'Processed'
+        WHEN '5' THEN
+        'Confirmed'
+        WHEN '6' THEN
+        'Virtual Card Processed'
+        WHEN '7' THEN
+        'Returned'
+        WHEN '8' THEN
+        'Notification Of Change'
+        WHEN '9' THEN
+        'Reversed'
+        WHEN '10' THEN
+        'Reversal Unsuccessful'
+        WHEN '11' THEN
+        'Deleted'
+        WHEN '12' THEN
+        'Rejected'
+        WHEN '13' THEN
+        'Authorized'
+        WHEN '14' THEN
+        'Blocked'
+        WHEN '15' THEN
+        'Expired'
+        WHEN '16' THEN
+        'Cancelled'
+        WHEN '17' THEN
+        'Partially Blocked'
+        WHEN '18' THEN
+        'Partially Expired'
+        WHEN '19' THEN
+        'Partially Processed'
+        ELSE
+        cases.supplemental_information -> 'payment_instruction_status'
+        END AS return_status, cast(transactions.amount AS decimal) AS payment_amount, cases.last_touched
+        FROM
+        "cases"
+        INNER JOIN "companies" ON "companies"."id" = "cases"."company_id"
+        INNER JOIN "suppliers" ON "suppliers"."id" = "cases"."supplier_id"
+        INNER JOIN "company_suppliers" ON "company_suppliers"."id" = "cases"."company_supplier_id"
+        INNER JOIN "transactions" ON "transactions"."case_id" = "cases"."id"
+        INNER JOIN "priorities" ON "priorities"."id" = "cases"."priority_id"
+        INNER JOIN "case_types" ON "case_types"."id" = "cases"."case_type_id"
+        INNER JOIN "statuses" ON "statuses"."id" = "cases"."status_id"
+        INNER JOIN "users" ON "users"."id" = "cases"."user_id"
+        WHERE (NOT company_suppliers.status_id = ANY (ARRAY [61, 64, 67, 10]))
+        AND(cases.status_id = ANY (ARRAY [51, 52, 54, 55]))
+        AND((cast(transactions.amount AS decimal) &gt; 0
+        AND transactions.transaction_type_id = ANY (ARRAY [2, 3])))
+        AND((CAST(cases.supplemental_information -> 'valuedateassigned' AS date) &lt; (CURRENT_DATE - - 5)
+        OR CAST(cases.supplemental_information -> 'due_date' AS date) &lt; (CURRENT_DATE - - 5)))
+        AND(case_type_id = ANY (ARRAY [2, 4]))
+        AND(cases.status_id = ANY (ARRAY [51, 52, 55, 54]))
+        AND(suppliers.priority_id = ANY (ARRAY [9, 8, 7]))
+        AND companies.name IS NOT NULL
+        AND suppliers.name IS NOT NULL
+        AND suppliers.priority_id IS NOT NULL
+        AND cases.last_touched IS NOT NULL
+        AND suppliers.profile -> 'timezone' IS NOT NULL
+        AND transactions.amount IS NOT NULL
+        AND cases.supplemental_information -> 'return_status_id' = ANY (ARRAY ['5', '13', '19'])
+        AND cases.payment_id_formatted IS NOT NULL
+        AND payment_id_formatted not like '%EXTERNAL%'
+        ORDER BY
+        suppliers.priority_id DESC,
+        (
+        CASE WHEN cases.case_type_id = 4 THEN
+        CAST(cases.supplemental_information -> 'due_date' AS DATE)
+        END),
+        (
+        CASE WHEN (
+        SELECT
+        count(1)
+        FROM
+        cases c
+        WHERE
+        c.case_type_id = ANY (ARRAY [2, 4])
+        AND c.company_supplier_id = cases.company_supplier_id) = 1 THEN
+        1
+        ELSE
+        0
+        END)
+        DESC, cases.case_type_id DESC, CAST(cases.supplemental_information -> 'due_date' AS date), CAST(cases.supplemental_information -> 'valuedateassigned' AS date)
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY1096_AsstdPaymentServices_PaymentQuestions">
+        SELECT
+        cases.id as cases_id,
+        companies.name AS company_name,
+        suppliers.name AS supplier_name,
+        suppliers.priority_id AS supplier_priority_id,
+        (
+        CASE WHEN (
+        SELECT
+        count(1)
+        FROM
+        cases c
+        WHERE
+        c.case_type_id = ANY (ARRAY [2, 4])
+        AND c.company_supplier_id = cases.company_supplier_id) = 1 THEN
+        1
+        ELSE
+        0
+        END) AS first_time_payment, COALESCE(CAST(cases.supplemental_information -> 'due_date' AS date), CAST(cases.supplemental_information -> 'valuedateassigned' AS date)) AS value_date, replace(coalesce(suppliers.profile -> 'timezone', ''), ' Time Zone', '') AS time_zone, case_types.name AS case_type_name, priorities.name AS priority_name, cases.status_desc AS status_desc, users.name AS user_name, cases.payment_id_formatted, transactions.payment_reference, CASE cases.supplemental_information -> 'return_status_id'
+        WHEN '1' THEN
+        'Pending'
+        WHEN '2' THEN
+        'Exception'
+        WHEN '3' THEN
+        'Submitted'
+        WHEN '4' THEN
+        'Processed'
+        WHEN '5' THEN
+        'Confirmed'
+        WHEN '6' THEN
+        'Virtual Card Processed'
+        WHEN '7' THEN
+        'Returned'
+        WHEN '8' THEN
+        'Notification Of Change'
+        WHEN '9' THEN
+        'Reversed'
+        WHEN '10' THEN
+        'Reversal Unsuccessful'
+        WHEN '11' THEN
+        'Deleted'
+        WHEN '12' THEN
+        'Rejected'
+        WHEN '13' THEN
+        'Authorized'
+        WHEN '14' THEN
+        'Blocked'
+        WHEN '15' THEN
+        'Expired'
+        WHEN '16' THEN
+        'Cancelled'
+        WHEN '17' THEN
+        'Partially Blocked'
+        WHEN '18' THEN
+        'Partially Expired'
+        WHEN '19' THEN
+        'Partially Processed'
+        ELSE
+        cases.supplemental_information -> 'payment_instruction_status'
+        END AS return_status, cast(transactions.amount AS decimal) AS payment_amount, cases.last_touched
+        FROM
+        "cases"
+        INNER JOIN "companies" ON "companies"."id" = "cases"."company_id"
+        INNER JOIN "suppliers" ON "suppliers"."id" = "cases"."supplier_id"
+        INNER JOIN "company_suppliers" ON "company_suppliers"."id" = "cases"."company_supplier_id"
+        INNER JOIN "transactions" ON "transactions"."case_id" = "cases"."id"
+        INNER JOIN "priorities" ON "priorities"."id" = "cases"."priority_id"
+        INNER JOIN "case_types" ON "case_types"."id" = "cases"."case_type_id"
+        INNER JOIN "statuses" ON "statuses"."id" = "cases"."status_id"
+        INNER JOIN "users" ON "users"."id" = "cases"."user_id"
+        INNER JOIN "case_activities" ON "case_activities"."case_id" = "cases"."id"
+        WHERE (NOT company_suppliers.status_id = ANY (ARRAY [61, 64, 67, 10]))
+        AND(cases.status_id = ANY (ARRAY [51, 52, 54, 55]))
+        AND((cast(transactions.amount AS decimal) &gt; 0
+        AND transactions.transaction_type_id = ANY (ARRAY [2, 3])))
+        AND((CAST(cases.supplemental_information -> 'valuedateassigned' AS date) &lt; (CURRENT_DATE - - 5)
+        OR CAST(cases.supplemental_information -> 'due_date' AS date) &lt; (CURRENT_DATE - - 5)))
+        AND(case_type_id = ANY (ARRAY [2, 4]))
+        AND(cases.status_id = ANY (ARRAY [51, 52, 55, 54]))
+        AND(suppliers.priority_id = ANY (ARRAY [9, 8, 7]))
+        AND companies.name IS NOT NULL
+        AND suppliers.name IS NOT NULL
+        AND suppliers.priority_id IS NOT NULL
+        AND cases.last_touched IS NOT NULL
+        AND suppliers.profile -> 'timezone' IS NOT NULL
+        AND transactions.amount IS NOT NULL
+        AND cases.supplemental_information -> 'return_status_id' = ANY (ARRAY ['5', '13', '19'])
+        AND cases.payment_id_formatted IS NOT NULL
+        AND case_activities.activity_type_id IN (?)
+        ORDER BY
+        suppliers.priority_id DESC,
+        (
+        CASE WHEN cases.case_type_id = 4 THEN
+        CAST(cases.supplemental_information -> 'due_date' AS DATE)
+        END),
+        (
+        CASE WHEN (
+        SELECT
+        count(1)
+        FROM
+        cases c
+        WHERE
+        c.case_type_id = ANY (ARRAY [2, 4])
+        AND c.company_supplier_id = cases.company_supplier_id) = 1 THEN
+        1
+        ELSE
+        0
+        END)
+        DESC, cases.case_type_id DESC, CAST(cases.supplemental_information -> 'due_date' AS date), CAST(cases.supplemental_information -> 'valuedateassigned' AS date)
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY834_AssistedPaymentServices_PaymentAndBankInfo">
+        with cte_case_base as (
+        select *
+        from vw_cases
+        where 1 = 1
+        --   and cases_case_type_name in ('CMVP', 'SMVP')
+        and cases_case_type_id = ANY (ARRAY [2, 4])
+        --   and cases_status_name in ('Open', 'Hold', 'In Progress', 'New')
+        and cases_status_id = ANY (ARRAY [51, 52, 54, 55])
+        --   and company_suppliers_status_name not in ('Inactive', 'Prospect', 'Merged', 'Archived')
+        and company_suppliers_status_id != ANY (ARRAY [61, 64, 67, 10])
+        and cast(cases_payment_amount as decimal) > 0
+        and cases_payment_id_formatted is not null
+        )
+        select cases_id from cte_case_base
+        order by cases_id
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY837_AssistedPaymentServices_PayNETSync">
+        with cte_case_base as (
+        select *
+        from vw_cases
+        where 1 = 1
+        --   and cases_case_type_name in ('CMVP', 'SMVP')
+        and cases_case_type_id = ANY (ARRAY [2, 4])
+        --   and cases_status_name in ('Open', 'Hold', 'In Progress', 'New')
+        and cases_status_id = ANY (ARRAY [51, 52, 54, 55])
+        --   and company_suppliers_status_name not in ('Inactive', 'Prospect', 'Merged', 'Archived')
+        and company_suppliers_status_id != ANY (ARRAY [61, 64, 67, 10])
+        and cast(cases_payment_amount as decimal) > 0
+        and cases_payment_id_formatted is not null
+        )
+        select cases_id
+        from cte_case_base
+        where -- todo: add return_status_id to materialized view
+        exists(select 1
+        from cases
+        where cases.supplemental_information -> 'return_status_id' = ANY (ARRAY ['5', '13', '19'])
+        and cases.id = cte_case_base.cases_id)
+        order by cases_id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY977_PartnerEnrollmentsCases">
+        SELECT
+        partner_cases.id AS partner_case_id,
+        partner_case_data.transformed -> 'communityName' AS community_name,
+        partner_case_data.transformed -> 'partnerTypeKey' AS pt_id,
+        partner_case_data.transformed -> 'partnerName' AS partner_name,
+        partner_statuses.name AS partner_case_status,
+        partner_outcomes.name AS partner_case_outcome_name,
+        partner_cases.created_at AS partner_case_created_at,
+        partner_case_data.transformed -> 'createdBy' AS partner_case_created_by,
+        users.name AS partner_case_assigned_to
+        FROM
+        "partner_cases"
+        INNER JOIN partner_case_data ON partner_case_data.partner_case_id = partner_cases.id
+        INNER JOIN partner_statuses ON partner_statuses.id = partner_cases.partner_status_id
+        INNER JOIN users ON users.id = partner_cases.user_id
+        LEFT OUTER JOIN partner_case_entries ON partner_case_entries.id = partner_cases.last_partner_case_entry_id
+        LEFT OUTER JOIN partner_activity_outcomes ON partner_activity_outcomes.id = partner_case_entries.partner_activity_outcome_id
+        LEFT OUTER JOIN partner_outcomes ON partner_outcomes.id = partner_activity_outcomes.partner_outcome_id
+        WHERE
+        partner_case_data.transformed -> 'communityName' IS NOT NULL
+        AND partner_case_data.transformed -> 'partnerTypeKey' IS NOT NULL
+        AND partner_case_data.transformed -> 'partnerName' IS NOT NULL
+        AND partner_statuses.name IS NOT NULL
+        AND partner_outcomes.name IS NOT NULL
+        AND partner_cases.created_at IS NOT NULL
+        AND partner_case_data.transformed -> 'createdBy' IS NOT NULL
+        AND users.name IS NOT NULL
+        ORDER BY
+        "partner_cases"."id" ASC
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY704_GeneralContacts">
+        SELECT
+        contacts.id AS id,
+        contacts.name,
+        statuses.id AS status_id,
+        statuses.name AS status_name,
+        priorities.id AS priority_id,
+        priorities.name AS priority_name,
+        contact_types.id AS contact_type_id,
+        contact_types.name AS contact_type_name,
+        phone_1,
+        CASE WHEN contacts.settings -> 'phone_1_ext' = '' THEN
+        contacts.phone_1
+        ELSE
+        concat(phone_1, ' ext. ', contacts.settings -> 'phone_1_ext')
+        END AS phone_1_formatted,
+        phone_1_type,
+        phone_2,
+        phone_2_type,
+        email,
+        title
+        FROM
+        "contacts"
+        INNER JOIN "statuses" ON "statuses"."id" = "contacts"."status_id"
+        INNER JOIN "priorities" ON "priorities"."id" = "contacts"."priority_id"
+        LEFT OUTER JOIN supplier_contacts ON contacts.id = supplier_contacts.contact_id
+        LEFT OUTER JOIN contact_types ON supplier_contacts.contact_type_id = contact_types.id
+        WHERE
+        NULLIF(TRIM(contacts.name), '') IS NOT NULL
+        AND NULLIF(TRIM(statuses.name), '') IS NOT NULL
+        AND NULLIF(TRIM(priorities.name), '') IS NOT NULL
+        AND NULLIF(TRIM(phone_1), '') IS NOT NULL
+        AND NULLIF(TRIM(phone_1_type), '') IS NOT NULL
+        AND NULLIF(TRIM(phone_2), '') IS NOT NULL
+        AND NULLIF(TRIM(phone_2_type), '') IS NOT NULL
+        AND NULLIF(TRIM(email), '') IS NOT NULL
+        AND NULLIF(TRIM(title), '') IS NOT NULL
+        ORDER BY
+        "contacts"."name" ASC,
+        id DESC
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY698_DailyGrindWorkQueues">
+        SELECT
+        work_queues.id AS id,
+        work_queues.name,
+        work_queues.notes,
+        work_queues.tag,
+        priorities.name AS priority_name,
+        statuses.name AS status_name,
+        work_queue_types.name AS work_queue_type_name
+        FROM
+        "work_queues"
+        INNER JOIN "priorities" ON "priorities"."id" = "work_queues"."priority_id"
+        INNER JOIN "statuses" ON "statuses"."id" = "work_queues"."status_id"
+        INNER JOIN "work_queue_types" ON "work_queue_types"."id" = "work_queues"."work_queue_type_id"
+        LEFT JOIN LATERAL (
+        SELECT
+        COUNT(*) AS num_cases,
+        sum(cte.spend) AS spend
+        FROM
+        CASES c
+        INNER JOIN case_work_queues cwq ON c.id = cwq.case_id
+        LEFT JOIN (
+        SELECT
+        sum(transactions.amount) AS spend,
+        transactions.company_supplier_id,
+        transactions.details -> 'vnet_company_id' AS vnet_company_id,
+        transactions.details -> 'payment_id' AS payment_id
+        FROM
+        transactions
+        WHERE
+        transactions.details -> 'payment_id' IS NOT NULL
+        GROUP BY
+        transactions.company_supplier_id,
+        transactions.details -> 'vnet_company_id',
+        transactions.details -> 'payment_id') cte ON c.company_supplier_id = cte.company_supplier_id
+        AND c.supplemental_information -> 'vnet_company_id' = cte.vnet_company_id
+        AND c.supplemental_information -> 'payment_id' = cte.payment_id
+        WHERE
+        cwq.work_queue_id = work_queues.id
+        AND c.status_id NOT in(53, 54, 56)) x ON TRUE
+        WHERE
+        NULLIF(TRIM(work_queues.name), '') IS NOT NULL
+        AND NULLIF(TRIM(work_queue_types.name), '') IS NOT NULL
+        AND NULLIF(TRIM(priorities.name), '') IS NOT NULL
+        AND NULLIF(TRIM(statuses.name), '') IS NOT NULL
+        AND NULLIF(TRIM(work_queues.notes), '') IS NOT NULL
+        ORDER BY
+        "work_queues"."name" ASC
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY673_GeneralSupplierData">
+        SELECT
+        suppliers.id AS id,
+        suppliers.name,
+        suppliers.tin,
+        suppliers.ticker,
+        suppliers.web_address,
+        CASE WHEN suppliers.profile -> 'primary_phone_ext' != '' THEN
+        concat(suppliers.primary_phone, ' ext. ', suppliers.profile -> 'primary_phone_ext')
+        ELSE
+        suppliers.primary_phone
+        END AS primary_phone,
+        suppliers.primary_fax,
+        suppliers.parent_id,
+        suppliers.locale,
+        suppliers.language,
+        suppliers.origination_source,
+        statuses.name AS status_name,
+        statuses.id AS status_id,
+        suppliers.priority_id AS supplier_priority_id,
+        priorities.name AS priority_name,
+        supplier_types.id AS supplier_type_id,
+        suppliers.profile -> 'dbas' AS dba,
+        suppliers.system_xref -> 'embedded_url' AS is_embedded_url,
+        suppliers.vnet_supplier_id AS vnet_supplier_id,
+        CASE WHEN supplier_types.in_program = TRUE THEN
+        'In Program - ' || supplier_types.name
+        ELSE
+        'Out of Program - ' || supplier_types.name
+        END AS supplier_type_name,
+        EXISTS (
+        SELECT
+        1
+        FROM
+        company_suppliers
+        WHERE
+        company_suppliers.supplier_id = suppliers.id) AS has_company_supplier
+        FROM
+        "suppliers"
+        INNER JOIN "statuses" ON "statuses"."id" = "suppliers"."status_id"
+        INNER JOIN "supplier_types" ON "supplier_types"."id" = "suppliers"."supplier_type_id"
+        INNER JOIN "priorities" ON "priorities"."id" = "suppliers"."priority_id"
+        WHERE
+        suppliers.supplier_type_id = 1
+        AND suppliers.status_id = 67
+        AND suppliers.priority_id = 7
+        AND NULLIF(TRIM(suppliers.name), '') IS NOT NULL
+        -- AND NULLIF(TRIM(suppliers.profile -> 'dbas'), '') IS NOT NULL
+        -- AND NULLIF(TRIM(suppliers.tin), '') IS NOT NULL
+        -- AND NULLIF(TRIM(suppliers.vnet_supplier_id), '') IS NOT NULL
+        -- AND NULLIF(TRIM(suppliers.web_address), '') IS NOT NULL
+        AND NULLIF(TRIM(statuses.name), '') IS NOT NULL
+        AND NULLIF(TRIM(priorities.name), '') IS NOT NULL
+        AND NULLIF(TRIM(suppliers.origination_source), '') IS NOT NULL
+        ORDER BY
+        id DESC
+        LIMIT 1
+    </entry>
+
+    <entry key="CPAY665_DailyGrindCasesDetails">
+        SELECT
+        cases.id,
+        cases.name,
+        cases.created_at,
+        cases.updated_at,
+        cases.alarm_date,
+        cases.completed_date,
+        cases.notes,
+        cases.user_id,
+        user_name,
+        cases.supplier_id,
+        cases.company_id,
+        cases.company_supplier_id,
+        case_type_name,
+        case_type_id,
+        priority_name,
+        priority_id,
+        status_id,
+        status_desc,
+        company_name,
+        supplier_name,
+        supplier_status_id,
+        supplier_priority_id,
+        payment_reference,
+        time_zone,
+        cases.work_queue_id,
+        work_queue_name,
+        dba,
+        value_date,
+        city,
+        state_province,
+        vendor_ids,
+        case_type_order,
+        total_spend AS total_spend,
+        check_count AS check_count
+        FROM (
+        SELECT
+        cases.id,
+        cases.name AS name,
+        cases.created_at,
+        cases.updated_at,
+        cases.alarm_date,
+        cases.completed_date,
+        cases.notes,
+        cases.user_id,
+        CASE users.name
+        WHEN 'Default' THEN
+        ''
+        ELSE
+        users.name
+        END AS user_name,
+        cases.supplier_id,
+        cases.company_id,
+        cases.company_supplier_id,
+        case_types.name AS case_type_name,
+        (
+        CASE WHEN LOWER(case_types.name) = 'vpay'
+        OR LOWER(case_types.name) = 'cmvp' THEN
+        1
+        WHEN LOWER(case_types.name) = 'spay'
+        OR LOWER(case_types.name) = 'smvp' THEN
+        2
+        WHEN LOWER(case_types.name) = 'inrollment' THEN
+        3
+        WHEN LOWER(case_types.name) = 'enrollment' THEN
+        3
+        ELSE
+        4
+        END) AS case_type_order,
+        case_types.id AS case_type_id,
+        priorities.name AS priority_name,
+        priorities.id AS priority_id,
+        statuses.id AS status_id,
+        cases.status_desc AS status_desc,
+        companies.name AS company_name,
+        suppliers.name AS supplier_name,
+        suppliers.status_id AS supplier_status_id,
+        suppliers.priority_id AS supplier_priority_id,
+        suppliers.profile -> 'timezone' AS time_zone,
+        cases.payment_id_formatted AS payment_reference,
+        work_queues.id AS work_queue_id,
+        work_queues.name AS work_queue_name,
+        CAST(cases.supplemental_information -> 'valuedateassigned' AS TIMESTAMP) AS value_date,
+        COALESCE(suppliers.profile -> 'dba', suppliers.profile -> 'dbas') AS dba,
+        (
+        CASE WHEN cases.case_type_id IN(2, 4) THEN
+        cast(transactions.amount AS DECIMAL)
+        ELSE
+        cast(company_suppliers.total_spend AS DECIMAL)
+        END) AS total_spend,
+        (
+        CASE WHEN cases.case_type_id IN(2, 4) THEN
+        transactions.transaction_count
+        ELSE
+        CAST(COALESCE(company_suppliers.number_checks, '0') AS INT)
+        END) AS check_count,
+        supplier_addresses.city AS city,
+        supplier_addresses.state_province AS state_province,
+        array_to_string(company_suppliers.vendor_id_arr, ', ') AS vendor_ids
+        FROM
+        cases
+        INNER JOIN statuses ON statuses.id = cases.status_id
+        INNER JOIN priorities ON priorities.id = cases.priority_id
+        INNER JOIN case_types ON case_types.id = cases.case_type_id
+        LEFT OUTER JOIN users ON users.id = cases.user_id
+        LEFT OUTER JOIN case_work_queues ON case_work_queues.case_id = cases.id
+        LEFT OUTER JOIN work_queues ON work_queues.id = case_work_queues.work_queue_id
+        LEFT OUTER JOIN companies ON companies.id = cases.company_id
+        LEFT OUTER JOIN suppliers ON suppliers.id = cases.supplier_id
+        LEFT OUTER JOIN company_suppliers ON company_suppliers.id = cases.company_supplier_id
+        LEFT JOIN LATERAL (
+        SELECT
+        sum(cast(t.amount AS DECIMAL)) AS amount,
+        sum(CAST(t.details -> 'tx_count' AS INTEGER)) AS transaction_count
+        FROM
+        transactions t
+        WHERE
+        t.case_id = cases.id) transactions ON TRUE
+        LEFT JOIN LATERAL (
+        SELECT
+        *
+        FROM
+        supplier_addresses
+        WHERE
+        supplier_addresses.supplier_id = cases.supplier_id
+        AND supplier_addresses.address_type_id = 1
+        LIMIT 1) supplier_addresses ON TRUE
+        LEFT OUTER JOIN enrollment_activities ON enrollment_activities.id = cases.last_enrollment_activity_id
+        LEFT OUTER JOIN enrollment_details ON enrollment_details.id = enrollment_activities.enrollment_detail_id) cases
+        WHERE
+        cases.status_id != 56
+        AND case_type_id IN(15)
+        AND status_id IN(55)
+        AND priority_id IN(40)
+        AND NULLIF(TRIM(cases.name), '') IS NOT NULL
+        AND NULLIF(TRIM(supplier_name), '') IS NOT NULL
+        AND NULLIF(TRIM(priority_name), '') IS NOT NULL
+        AND NULLIF(TRIM(case_type_name), '') IS NOT NULL
+        ORDER BY
+        id DESC
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY723_724_725_727_728_731_735_736_DailyGrindCases">
+        SELECT
+        cases.id as cases_id,
+        cases.name
+        FROM
+        cases
+        INNER JOIN case_activities ON case_activities.case_id = cases.id
+        INNER JOIN suppliers ON suppliers.id = cases.supplier_id
+        INNER JOIN supplier_addresses ON supplier_addresses.supplier_id = suppliers.id
+        INNER JOIN supplier_contacts ON supplier_contacts.supplier_id = suppliers.id
+        INNER JOIN company_suppliers ON company_suppliers.id = cases.company_supplier_id
+        INNER JOIN transactions ON transactions.case_id = cases.id
+        INNER JOIN versions ON versions.item_id = cases.id AND versions.item_type = 'Case'
+        WHERE
+        cases.case_type_id = 15
+        AND cases.status_id = 53
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY729_DailyGrindCases">
+        with cte_case_base as (
+        select *
+        from vw_cases
+        where 1 = 1
+        and cases_case_type_id in (15) -- Enrollment
+        and cases_status_id in (53) -- Closed
+        and company_suppliers_status_id not in (61, 64, 67, 10)
+        and coalesce(nullif(trim(company_suppliers_link_id), ''), '') != ''
+        and enrollment_company_suppliers_status_id in (70) -- Approved
+        -- CPAY-723 - will ensure a wave exists
+        and enrollment_company_suppliers_enrollment_id is not null
+        and coalesce(nullif(trim(enrollment_company_suppliers_inrolled_by), ''), '') != ''
+        )
+        select cases_id
+        from cte_case_base
+        where 1=1
+        -- CPAY-729 - has attachments records
+        and exists (
+        select 1
+        from attachments
+        left outer join attachment_cases on attachments.id = attachment_cases.attachment_id
+        left outer join attachment_companies on attachments.id = attachment_companies.attachment_id
+        left outer join attachment_suppliers on attachments.id = attachment_suppliers.attachment_id
+
+        where (
+        attachment_cases.case_id = cte_case_base.cases_id
+        or attachment_companies.company_id = cte_case_base.cases_company_id
+        or attachment_suppliers.supplier_id = cte_case_base.cases_supplier_id
+        )
+        )
+        order by cases_id desc
+        limit 1
+    </entry>
+
+    <entry key="CPAY772_ProgramManagement_SuppliersWithEnrollments">
+        with cte_ecs as (
+        select enrollment_company_suppliers.*
+        from enrollments
+        inner join companies on enrollments.company_id = companies.id
+        and companies.company_type_id in (1)
+        and companies.status_id in (2)
+        and companies.vnet_company_id is not null
+        inner join enrollment_company_suppliers on enrollments.id = enrollment_company_suppliers.enrollment_id
+        and enrollment_company_suppliers.status_id not in (74, 75, 76, 80, 82, 85, 86, 87, 61, 64, 67)
+        where 1=1
+        and coalesce(nullif(trim(enrollments.system_xref -> 'campaign_id'), ''), '') != ''
+        and enrollments.status_id in (18,19)
+        and enrollments.enrollment_type_id not in (2,3,4)
+        )
+        select distinct enrollment_id as cases_id
+        from cte_ecs
+        where 1=1
+        and not exists (
+        select 1
+        from cases
+        where cases.case_type_id in (15) -- Enrollment
+        and cases.company_supplier_id = cte_ecs.company_supplier_id
+        )
+        order by enrollment_id desc
+        limit 1
+    </entry>
+    
+    
+    <entry key="CPAY733_DailyGrind_Cases_RecordedEnrollment_AdditionalInfo">
+        with cte_case_base as (
+        select *
+        from vw_cases
+        where 1 = 1
+        and cases_case_type_id in (15) -- Enrollment
+        and cases_status_id in (53) -- Closed
+        and company_suppliers_status_id not in (61, 64, 67, 10)
+        and coalesce(nullif(trim(company_suppliers_link_id), ''), '') != ''
+        and enrollment_company_suppliers_status_id in (70) -- Approved
+        -- CPAY-723 - will ensure a wave exists
+        and enrollment_company_suppliers_enrollment_id is not null
+        and coalesce(nullif(trim(enrollment_company_suppliers_inrolled_by), ''), '') != ''
+        )
+        select cases_id
+        from cte_case_base
+        where 1=1
+        -- CPAY-733 - has data to show on the 'Record Enrollment' tab
+        and coalesce(nullif(trim(company_suppliers_virtual_email), ''), nullif(trim(company_suppliers_remittance_advice_email_recipient), ''), '') != ''
+        -- (optional) CPAY-733 - has data to show on the 'Additional Information' &gt; 'Legacy Data' panel
+        and exists (
+        select 1
+        from suppliers
+        where origination_data is not null
+        and id = cte_case_base.cases_supplier_id
+        )
+        order by cases_id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY818_DailyGrind_Cases_RelatedCaseTab">
+        WITH related_cases_data AS (
+        SELECT
+        cases.company_id,
+        cases.supplier_id
+        FROM
+        cases
+        WHERE
+        cases.case_type_id = 15
+        AND cases.status_id IN (51,52,54,55)
+        GROUP BY cases.company_id, cases.supplier_id
+        HAVING COUNT(cases.company_id) &gt; 1 AND count(cases.supplier_id) &gt; 1
+        LIMIT 1
+        )
+        SELECT id as cases_id, name FROM cases where supplier_id = (SELECT supplier_id FROM related_cases_data) AND company_id = (SELECT company_id FROM related_cases_data)
+    </entry>
+
+
+    <entry key="CPAY794_797_GeneralSupplierID">
+        with cte_supp as (
+        select
+        s.id as supplier_id,
+        c.id as company_id,
+        cs.id as cs_id,
+        ecs.id as ecs_id
+        from suppliers s
+        inner join company_suppliers cs on s.id = cs.supplier_id
+        and cs.status_id in (9)
+        and cs.vendor_id_arr is not null
+        inner join companies c on cs.company_id = c.id
+        and (coalesce(c.vnet_company_id, '') != ''
+        and length(coalesce(c.vnet_company_id, '')) = 9)
+        and c.status_id in (1,2)
+        and c.company_type_id in (1)
+        inner join enrollment_company_suppliers ecs on cs.id = ecs.company_supplier_id
+        and ecs.link_id is not null
+        and ecs.status_id in (70)
+        where 1=1
+        and s.status_id in (9)
+        and (coalesce(s.tin, '') != ''
+        and length(coalesce(s.tin, '')) = 9)
+        and (coalesce(s.vnet_supplier_id, '') != ''
+        and length(coalesce(s.vnet_supplier_id, '')) = 9)
+        )
+        select distinct
+        cte_supp.supplier_id as cases_id
+        from cte_supp
+        where 1=1
+        and (
+        exists(
+        select 1
+        from attachment_suppliers spp
+        where spp.supplier_id = cte_supp.supplier_id
+        ) or exists(
+        select 1
+        from attachment_company_suppliers cspp
+        where cspp.company_supplier_id = cte_supp.cs_id
+        )
+        )
+        order by cte_supp.supplier_id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY737_738_739_DuplicateSupplierManagement">
+        SELECT DISTINCT duplicate_suppliers.id                                         AS duplicate_supplier_id,
+        duplicate_suppliers.enrollment_id,
+        CASE
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 1 THEN 'MSF Import'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 2 THEN 'Case'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 3 THEN 'Single Supplier Creation'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 4 THEN 'API'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 5 THEN 'System'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 6 THEN 'Rerun' END AS source_name,
+        suppliers.id                                                                   AS id,
+        suppliers.name                                                                 AS supplier_name,
+        companies.name                                                                 AS company_name,
+        suppliers.tin                                                                  AS supplier_tin,
+        suppliers.primary_phone                                                        AS supplier_phone,
+        suppliers.status_id                                                            AS supplier_status_id,
+        duplicate_suppliers.company_supplier_id                                        AS cs_id,
+        statuses.name                                                                  AS supplier_status_name,
+        supplier_addresses.address_1,
+        supplier_addresses.city,
+        supplier_addresses.state_province,
+        supplier_addresses.postal_code,
+        supplier_addresses.country,
+        duplicate_suppliers.created_at,
+        duplicate_suppliers.updated_at,
+        duplicate_suppliers.created_by
+        from duplicate_suppliers
+        inner join companies on companies.id = duplicate_suppliers.company_id
+        and (coalesce(companies.vnet_company_id, '') != ''
+        and length(coalesce(companies.vnet_company_id, '')) = 9)
+        and companies.status_id in (1,2)
+        and companies.company_type_id in (1)
+        inner join suppliers on suppliers.id = duplicate_suppliers.supplier_id
+        and suppliers.status_id not in (61, 64, 67)
+        inner join company_suppliers on company_suppliers.supplier_id = suppliers.id
+        and company_suppliers.status_id not in (61, 64, 67)
+        inner join statuses on statuses.id = suppliers.status_id
+        inner join supplier_addresses on supplier_addresses.supplier_id = suppliers.id
+        and supplier_addresses.address_type_id = 1
+        where duplicate_suppliers.status_id = 1
+        order by duplicate_suppliers.created_at desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY755_756_758_DuplicateSupplierManagement">
+        SELECT DISTINCT duplicate_suppliers.id                                         AS duplicate_supplier_id,
+        duplicate_suppliers.enrollment_id,
+        CASE
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 1 THEN 'MSF Import'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 2 THEN 'Case'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 3 THEN 'Single Supplier Creation'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 4 THEN 'API'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 5 THEN 'System'
+        WHEN duplicate_suppliers.duplicate_supplier_source_id = 6 THEN 'Rerun' END AS source_name,
+        suppliers.id                                                                   AS id,
+        suppliers.name                                                                 AS supplier_name,
+        companies.name                                                                 AS company_name,
+        suppliers.tin                                                                  AS supplier_tin,
+        suppliers.primary_phone                                                        AS supplier_phone,
+        suppliers.status_id                                                            AS supplier_status_id,
+        duplicate_suppliers.company_supplier_id                                        AS cs_id,
+        statuses.name                                                                  AS supplier_status_name,
+        supplier_addresses.address_1,
+        supplier_addresses.city,
+        supplier_addresses.state_province,
+        supplier_addresses.postal_code,
+        supplier_addresses.country,
+        duplicate_suppliers.created_at,
+        duplicate_suppliers.updated_at,
+        duplicate_suppliers.created_by
+        from duplicate_suppliers
+        inner join companies on companies.id = duplicate_suppliers.company_id
+        and (coalesce(companies.vnet_company_id, '') != ''
+        and length(coalesce(companies.vnet_company_id, '')) = 9)
+        and companies.status_id in (1,2)
+        and companies.company_type_id in (1)
+        inner join suppliers on suppliers.id = duplicate_suppliers.supplier_id
+        and suppliers.status_id not in (61, 64, 67)
+        inner join company_suppliers on company_suppliers.supplier_id = suppliers.id
+        and company_suppliers.status_id not in (61, 64, 67)
+        inner join statuses on statuses.id = suppliers.status_id
+        inner join supplier_addresses on supplier_addresses.supplier_id = suppliers.id
+        and supplier_addresses.address_type_id = 1
+        where duplicate_suppliers.status_id = 2
+        and companies.id in (
+        select companies.id
+        from duplicate_suppliers
+        inner join companies on companies.id = duplicate_suppliers.company_id
+        and (coalesce(companies.vnet_company_id, '') != ''
+        and length(coalesce(companies.vnet_company_id, '')) = 9)
+        and companies.status_id in (1,2)
+        and companies.company_type_id in (1)
+        where duplicate_suppliers.status_id = 2
+        group by companies.id
+        order by count(duplicate_suppliers.id) desc
+        limit 3
+        )
+        order by duplicate_suppliers.created_at desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY793_GeneralSuppliers_Validations">
+        select distinct s.id as cases_id
+        from suppliers s
+        inner join company_suppliers cs on s.id = cs.supplier_id
+        and cs.status_id in (9)
+        and cs.vendor_id_arr is not null
+        inner join companies c on cs.company_id = c.id
+        and (coalesce(c.vnet_company_id, '') != ''
+        and length(coalesce(c.vnet_company_id, '')) = 9)
+        and c.status_id in (1,2)
+        and c.company_type_id in (1)
+        inner join enrollment_company_suppliers ecs on cs.id = ecs.company_supplier_id
+        and ecs.link_id is not null
+        and ecs.status_id in (70)
+        where 1=1
+        and s.status_id in (9)
+        and (coalesce(s.tin, '') != ''
+        and length(coalesce(s.tin, '')) = 9)
+        and (coalesce(s.vnet_supplier_id, '') != ''
+        and length(coalesce(s.vnet_supplier_id, '')) = 9)
+        order by s.id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY844_845_846_General_ClientComapnies">
+        select c.id as cases_id, c.name
+        from companies c
+        inner join enrollments e on c.id = e.company_id
+        and e.status_id in (18,19)
+        and e.enrollment_type_id in (1,5,6)
+        where (coalesce(c.vnet_company_id, '') != ''
+        and length(coalesce(c.vnet_company_id, '')) = 9)
+        and c.status_id in (1,2)
+        and c.company_type_id in (1)
+        and exists (
+        select 1
+        from suppliers s
+        inner join company_suppliers cs on s.id = cs.supplier_id
+        and cs.status_id in (9, 11, 12, 13, 14)
+        and cs.company_id = c.id
+        and cs.priority_id = 9
+        inner join enrollment_company_suppliers ecs on cs.id = ecs.company_supplier_id
+        and ecs.status_id in (70, 83, 88, 77, 78, 79, 81, 71, 72, 73)
+        and ecs.enrollment_id = e.id
+        where s.status_id in (9, 11, 12, 13, 14)
+        )
+        order by c.id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY829_Supplier_ClientLinkInformation">
+        select distinct s.id as cases_id
+        from suppliers s
+        inner join company_suppliers cs on s.id = cs.supplier_id
+        and cs.status_id in (9)
+        and cs.vendor_id_arr is not null
+        inner join companies c on cs.company_id = c.id
+        and (coalesce(c.vnet_company_id, '') != ''
+        and length(coalesce(c.vnet_company_id, '')) = 9)
+        and c.status_id in (1,2)
+        and c.company_type_id in (1)
+        inner join enrollment_company_suppliers ecs on cs.id = ecs.company_supplier_id
+        and ecs.link_id is not null
+        and ecs.status_id in (70)
+        where 1=1
+        and s.status_id in (9)
+        and (coalesce(s.tin, '') != ''
+        and length(coalesce(s.tin, '')) = 9)
+        and (coalesce(s.vnet_supplier_id, '') != ''
+        and length(coalesce(s.vnet_supplier_id, '')) = 9)
+        order by s.id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY768_DailyGrind_Waves_ActivitiesTab">
+        select e.id as cases_id, e.name
+        from enrollments e
+        inner join companies c on e.company_id = c.id
+        and (coalesce(c.vnet_company_id, '') != ''
+        and length(coalesce(c.vnet_company_id, '')) = 9)
+        and c.status_id in (1,2)
+        and c.company_type_id in (1)
+        where 1=1
+        and e.status_id in (18,19)
+        and e.enrollment_type_id in (1,5,6)
+        and exists (
+        select 1
+        from enrollment_company_suppliers ecs
+        inner join enrollment_activities ea on ecs.id = ea.enrollment_company_supplier_id
+        and ea.status_id not in (80)
+        where e.id = ecs.enrollment_id
+        and ecs.status_id in (70, 83, 88, 77, 78, 79, 81, 71, 72, 73)
+        )
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY821_Supplier_AllRequiredTabs">
+        with cte_supp as (
+        select
+        s.id as supplier_id,
+        c.id as company_id,
+        cs.id as cs_id,
+        ecs.id as ecs_id
+        from suppliers s
+        inner join company_suppliers cs on s.id = cs.supplier_id
+        and cs.status_id in (9)
+        and cs.vendor_id_arr is not null
+        inner join companies c on cs.company_id = c.id
+        and (coalesce(c.vnet_company_id, '') != ''
+        and length(coalesce(c.vnet_company_id, '')) = 9)
+        and c.status_id in (1,2)
+        and c.company_type_id in (1)
+        inner join enrollment_company_suppliers ecs on cs.id = ecs.company_supplier_id
+        and ecs.link_id is not null
+        and ecs.status_id in (70)
+        where 1=1
+        and s.status_id in (9)
+        and (coalesce(s.tin, '') != ''
+        and length(coalesce(s.tin, '')) = 9)
+        and (coalesce(s.vnet_supplier_id, '') != ''
+        and length(coalesce(s.vnet_supplier_id, '')) = 9)
+        and (s.origination_data is not null
+        or s.profile is not null)
+        )
+        select distinct
+        cte_supp.supplier_id as cases_id
+        ,to_char(cases.created_at, 'MM/DD/YYYY') as case_activity_date_range_start
+        from cte_supp
+        inner join cases on cte_supp.company_id = cases.company_id
+        and cte_supp.supplier_id = cases.supplier_id
+        and cte_supp.cs_id = cases.company_supplier_id
+        and cases.case_type_id = 15
+        where 1=1
+        and exists (
+        select 1
+        from cases c
+        where cte_supp.company_id = c.company_id
+        and cte_supp.supplier_id = c.supplier_id
+        and cte_supp.cs_id = c.company_supplier_id
+        and c.case_type_id in (2,4)
+        )
+        and exists (
+        select 1
+        from supplier_contacts
+        where supplier_contacts.supplier_id = cte_supp.supplier_id
+        )
+        and exists (
+        select 1
+        from supplier_addresses
+        where supplier_addresses.supplier_id = cte_supp.supplier_id
+        )
+        order by cte_supp.supplier_id desc
+        limit 1
+    </entry>
+
+
+    <entry key="CPAY795_ProspectCompany">
+        select id as cases_id, name
+        from companies
+        where company_type_id = 5
+        and status_id = 1
+        and ticker = '6BDA77F3221D'
+        and web_address = 'E4166E51'
+        and primary_fax = '2345678901'
+        and locale = 'QUALITY'
+        and language = 'ASSURANCE'
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY796_ProspectCompany">
+        select id as cases_id, name
+        from companies
+        where company_type_id = 5
+        and status_id = 1
+        and ticker = '6BDA77F3221D'
+        and web_address = 'E4166E51'
+        and primary_fax = '2345678901'
+        and locale = 'QUALITY'
+        and language = 'ASSURANCE'
+        and parent_id is not null
+    </entry>
+
+
+    <entry key="CPAY812_ProspectCompany">
+        select id as cases_id, name
+        from companies
+        where company_type_id = 5
+        and status_id = 1
+        and ticker = '6BDA77F3221D'
+        and web_address = 'E4166E51'
+        and primary_fax = '2345678901'
+        and locale = 'QUALITY'
+        and language = 'ASSURANCE'
+        LIMIT 1
+    </entry>
+
+
+    <entry key="CPAY813_ProspectCompany">
+        select id as cases_id, name
+        from companies
+        where company_type_id = 5
+        and status_id = 1
+        and ticker = '6BDA77F3221D'
+        and web_address = 'E4166E51'
+        and primary_fax = '2345678901'
+        and locale = 'QUALITY'
+        and language = 'ASSURANCE'
+        LIMIT 1
+    </entry>
+</properties>

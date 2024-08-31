@@ -1,0 +1,16 @@
+{
+    "companyId": 123,
+    "expiresAt": null,
+    "assignedTo": null,
+    "additionalInfo": "This is the Test Info for API Test Automation",
+    "isActive": true,
+    "createdBy": "ggudi",
+    "isActivationCode": false,
+    "accessCode": "D_641719059_19",
+    "seedCount": 1,
+    "hitCount": 0,
+    "lastAccessedAt": null,
+    "createdAt": "2018-12-05T08:50:55.847+00:00",
+    "updatedBy": "ggudi",
+    "updatedAt": "2018-12-05T08:50:55.847+00:00"
+}
